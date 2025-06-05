@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>gtools Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+     body { font-family: Arial, sans-serif; background: #f9fafb; margin: 0; padding: 20px; }
+     h1 { text-align: center; margin-bottom: 40px; }
+     .grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 30px; }
+     .card { background: white; border-radius: 8px; width: 150px; height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #333; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+     .card:hover { transform: scale(1.05); }
+     .card i { font-size: 48px; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+  <h1>gtools Dashboard</h1>
+  <div class="grid">
+    <a class="card" href="https://www.wikipedia.org/" target="_blank">
+      <i class="fa-brands fa-wikipedia-w"></i>
+      <div>Wikipedia</div>
+    </a>
+    <a class="card" href="https://github.com/" target="_blank">
+      <i class="fa-brands fa-github"></i>
+      <div>GitHub</div>
+    </a>
+    <a class="card" href="https://news.ycombinator.com/" target="_blank">
+      <i class="fa-brands fa-hacker-news"></i>
+      <div>Hacker News</div>
+    </a>
+  </div>
+</body>
+</html>
