@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Binary Hex Editor</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+<div class="max-w-4xl mx-auto space-y-4">
+  <h1 class="text-2xl font-bold">Binary Hex Editor</h1>
+  <textarea id="base64-input" class="w-full p-2 border" rows="4" placeholder="Paste base64 string here"></textarea>
+  <div class="flex space-x-2 items-center">
+    <label>Range start: <input id="range-start" type="number" class="border p-1 w-24" value="0" min="0"></label>
+    <label>Range end: <input id="range-end" type="number" class="border p-1 w-24" value="0" min="0"></label>
+    <label>Base color: <input id="base-color" type="color" value="#ff0000"></label>
+    <button id="apply-range" class="bg-blue-500 text-white px-2 py-1 rounded">Apply</button>
+  </div>
+  <div id="grid" class="grid grid-cols-16 gap-1 font-mono text-sm"></div>
+  <h2 class="text-xl font-bold">Edited Base64:</h2>
+  <textarea id="base64-output" class="w-full p-2 border" rows="4" readonly></textarea>
+</div>
+<script>
+let data = new Uint8Array();
+const grid = document.getElementById('grid');
+const input = document.getElementById('base64-input');
+const output = document.getElementById('base64-output');
+const startInput = document.getElementById('range-start');
+const endInput = document.getElementById('range-end');
+const colorInput = document.getElementById('base-color');
+
+function decodeBase64(str) {
+  try {
+    const binary = atob(str.trim());
+    const arr = new Uint8Array(binary.length);
+    for (let i=0; i<binary.length; i++) arr[i] = binary.charCodeAt(i);
+    return arr;
+  } catch {
+    return new Uint8Array();
+  }
+}
+
+function encodeBase64(arr) {
+  let binary = '';
+  for (let i=0;i<arr.length;i++) binary += String.fromCharCode(arr[i]);
+  return btoa(binary);
+}
+
+function buildGrid() {
+  grid.innerHTML = '';
+  for (let i=0;i<data.length;i++) {
+    const cell = document.createElement('div');
+    cell.className = 'border p-1 cursor-pointer select-none';
+    cell.dataset.index = i;
+    cell.textContent = data[i].toString(16).padStart(2,'0').toUpperCase();
+    cell.ondblclick = editCell;
+    grid.appendChild(cell);
+  }
+  colorize();
+}
+
+function colorize() {
+  const start = parseInt(startInput.value)||0;
+  const end = parseInt(endInput.value)||0;
+  const base = colorInput.value;
+  const hsl = hexToHSL(base);
+  grid.querySelectorAll('div').forEach((cell,i)=>{
+    if(i>=start && i<=end){
+      const val = data[i];
+      const light = Math.round((val/255)*100);
+      cell.style.backgroundColor = `hsl(${hsl.h},${hsl.s}%,${light}%)`;
+      cell.style.color = light>50?'black':'white';
+    } else {
+      cell.style.backgroundColor = '';
+      cell.style.color = '';
+    }
+  });
+}
+
+function hexToHSL(H){
+    let r = 0, g = 0, b = 0;
+    if(H.length == 4){
+        r = "0x"+H[1]+H[1];
+        g = "0x"+H[2]+H[2];
+        b = "0x"+H[3]+H[3];
+    } else if (H.length == 7){
+        r = "0x"+H[1]+H[2];
+        g = "0x"+H[3]+H[4];
+        b = "0x"+H[5]+H[6];
+    }
+    r /= 255; g /= 255; b /= 255;
+    let cmin = Math.min(r,g,b), cmax = Math.max(r,g,b), delta = cmax - cmin;
+    let h = 0, s = 0, l = 0;
+    if (delta == 0) h = 0;
+    else if (cmax == r) h = ((g - b) / delta) % 6;
+    else if (cmax == g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+    l = (cmax + cmin) / 2;
+    s = delta == 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+    s = +(s * 100).toFixed(1);
+    l = +(l * 100).toFixed(1);
+    return {h,s,l};
+}
+
+function editCell(e){
+  const idx = parseInt(e.target.dataset.index);
+  const oldVal = data[idx].toString(16).padStart(2,'0');
+  const val = prompt('Enter new hex value', oldVal);
+  if(val!==null && /^[0-9a-fA-F]{2}$/.test(val)){
+    data[idx] = parseInt(val,16);
+    e.target.textContent = val.toUpperCase();
+    colorize();
+    output.value = encodeBase64(data);
+  }
+}
+
+input.addEventListener('input', ()=>{
+  data = decodeBase64(input.value);
+  endInput.value = data.length-1;
+  buildGrid();
+  output.value = encodeBase64(data);
+});
+
+colorInput.addEventListener('input', colorize);
+startInput.addEventListener('input', colorize);
+endInput.addEventListener('input', colorize);
+document.getElementById('apply-range').addEventListener('click', colorize);
+</script>
+</body>
+</html>
