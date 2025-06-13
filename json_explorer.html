@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>JSON Explorer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+<style>
+  body { font-family: Arial, sans-serif; background:#f3f4f6; padding: 1rem; }
+  #dropzone { border:2px dashed #999; padding:2rem; text-align:center; color:#666; margin-bottom:1rem; }
+  pre { background:#1e1e1e; color:#dcdcdc; padding:1rem; overflow:auto; }
+  #cmd { width:100%; padding:0.5rem; font-family:monospace; margin-bottom:0.5rem; }
+</style>
+</head>
+<body>
+<h1>JSON Explorer</h1>
+<div id="dropzone">Drop JSON file here or click to select<input type="file" id="file" accept="application/json" style="display:none"></div>
+<input id="cmd" type="text" placeholder="Enter query, e.g. orders | status">
+<pre><code id="display" class="language-json"></code></pre>
+<h2>Result</h2>
+<pre><code id="result" class="language-json"></code></pre>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<script>
+let data = null;
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file');
+const display = document.getElementById('display');
+const result = document.getElementById('result');
+const cmdInput = document.getElementById('cmd');
+
+function show(json) {
+  display.textContent = JSON.stringify(json, null, 2);
+  hljs.highlightElement(display);
+}
+
+function showResult(value) {
+  result.textContent = JSON.stringify(value, null, 2);
+  hljs.highlightElement(result);
+}
+
+function parseFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      data = JSON.parse(e.target.result);
+      show(data);
+      showResult('');
+    } catch(err) {
+      alert('Invalid JSON');
+    }
+  };
+  reader.readAsText(file);
+}
+
+dropzone.addEventListener('click',()=>fileInput.click());
+
+['dragenter','dragover'].forEach(evt=>dropzone.addEventListener(evt,e=>{e.preventDefault();dropzone.style.background='#e0e0e0';}));
+['dragleave','drop'].forEach(evt=>dropzone.addEventListener(evt,e=>{e.preventDefault();dropzone.style.background='';}));
+
+dropzone.addEventListener('drop', e=>{
+  const f = e.dataTransfer.files[0];
+  if(f) parseFile(f);
+});
+fileInput.addEventListener('change', e=>{
+  const f = e.target.files[0];
+  if(f) parseFile(f);
+});
+
+function query(obj, cmd) {
+  let tokens = cmd.split('|').map(t=>t.trim()).filter(Boolean);
+  let res = obj;
+  for (let tok of tokens) {
+    if (tok === 'keys') {
+      if (Array.isArray(res)) res = res.map(x => (x && typeof x==='object') ? Object.keys(x) : undefined);
+      else if (res && typeof res==='object') res = Object.keys(res);
+      else return undefined;
+    } else if (/^-?\d+$/.test(tok)) {
+      let idx = parseInt(tok,10);
+      if (Array.isArray(res)) res = res[idx];
+      else return undefined;
+    } else {
+      if (Array.isArray(res)) res = res.map(x => x ? x[tok] : undefined);
+      else if (res && typeof res==='object') res = res[tok];
+      else return undefined;
+    }
+  }
+  return res;
+}
+
+cmdInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){
+    if(!data) return;
+    let out = query(data, cmdInput.value);
+    showResult(out);
+  }
+});
+</script>
+</body>
+</html>
