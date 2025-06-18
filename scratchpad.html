@@ -9,8 +9,8 @@
 <style>
   html, body { height:100%; margin:0; }
   body { font-family: Arial, sans-serif; background:#f3f4f6; }
-  body.zen .wrapper { align-items:stretch; justify-content:stretch; }
-  body.zen textarea { width:100%; height:100%; }
+  body.zen .wrapper { align-items:stretch; justify-content:flex-start; padding:0 !important; }
+  body.zen textarea { width:100%; height:auto; flex:1; max-width:none; }
 </style>
 </head>
 <body>
@@ -18,14 +18,15 @@
   <div id="tabs" class="flex space-x-2 mb-2 overflow-x-auto"></div>
   <i id="settingsToggle" class="fa-solid fa-gear text-2xl cursor-pointer absolute top-2 right-2"></i>
   <textarea id="pad" class="w-full max-w-3xl h-60 p-4 font-mono text-sm" placeholder="Start typing..."></textarea>
-  <div id="settingsPanel" class="absolute top-12 right-2 bg-white p-4 shadow-lg rounded hidden space-y-2">
-    <label class="flex flex-col text-sm">Title:
-      <input id="titleInput" type="text" class="border p-1 rounded">
-    </label>
-    <button id="download" class="bg-blue-500 text-white px-2 py-1 rounded">Download</button>
-    <button id="downloadAll" class="bg-blue-500 text-white px-2 py-1 rounded">Download All</button>
-    <button id="zenToggle" class="bg-gray-500 text-white px-2 py-1 rounded">Zen Mode</button>
-  </div>
+    <div id="settingsPanel" class="absolute top-12 right-2 bg-white p-4 shadow-lg rounded hidden space-y-2">
+      <label class="flex flex-col text-sm">Title:
+        <input id="titleInput" type="text" class="border p-1 rounded">
+      </label>
+      <button id="download" class="bg-blue-500 text-white px-2 py-1 rounded">Download</button>
+      <button id="downloadAll" class="bg-blue-500 text-white px-2 py-1 rounded">Download All</button>
+      <button id="deleteNote" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+      <button id="zenToggle" class="bg-gray-500 text-white px-2 py-1 rounded">Zen Mode</button>
+    </div>
 </div>
 <script>
 const pad = document.getElementById('pad');
@@ -33,6 +34,7 @@ const titleInput = document.getElementById('titleInput');
 const settingsToggle = document.getElementById('settingsToggle');
 const settingsPanel = document.getElementById('settingsPanel');
 const zenToggle = document.getElementById('zenToggle');
+const deleteBtn = document.getElementById('deleteNote');
 const tabs = document.getElementById('tabs');
 const downloadAllBtn = document.getElementById('downloadAll');
 let zen = false;
@@ -58,6 +60,15 @@ function renderTabs(){
       'px-2 py-1 rounded bg-blue-500 text-white':
       'px-2 py-1 rounded bg-gray-200 hover:bg-gray-300');
     btn.onclick = ()=>{ saveCurrent(); current=i; loadCurrent(); renderTabs(); };
+    btn.ondblclick = () => {
+      const newTitle = prompt('Rename note:', notes[i].title);
+      if (newTitle !== null) {
+        notes[i].title = newTitle;
+        if (i === current) titleInput.value = newTitle;
+        saveNotes();
+        renderTabs();
+      }
+    };
     tabs.appendChild(btn);
   });
   const add = document.createElement('button');
@@ -100,6 +111,24 @@ titleInput.addEventListener('input', () => {
   notes[current].title = titleInput.value;
   saveNotes();
   renderTabs();
+});
+
+deleteBtn.addEventListener('click', () => {
+  if (notes.length === 1) {
+    notes[0] = {title:'note',content:''};
+    current = 0;
+    loadCurrent();
+    renderTabs();
+    saveNotes();
+    return;
+  }
+  if (confirm('Delete this note?')) {
+    notes.splice(current,1);
+    if (current >= notes.length) current = notes.length-1;
+    saveNotes();
+    loadCurrent();
+    renderTabs();
+  }
 });
 
 settingsToggle.addEventListener('click', () => {
