@@ -5,27 +5,27 @@
 <title>Scratchpad</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-  html, body { height:100%; margin:0; font-family: Arial, sans-serif; background:#f3f4f6; }
-  .wrapper { height:100%; display:flex; align-items:center; justify-content:center; position:relative; }
-  textarea { width:80%; height:60%; font-family: monospace; font-size:1rem; padding:1rem; box-sizing:border-box; }
-  #settingsToggle { position:absolute; top:10px; right:10px; font-size:1.5rem; cursor:pointer; }
-  #settingsPanel { position:absolute; top:45px; right:10px; background:white; padding:1rem; box-shadow:0 2px 6px rgba(0,0,0,0.2); display:none; }
+  html, body { height:100%; margin:0; }
+  body { font-family: Arial, sans-serif; background:#f3f4f6; }
   body.zen .wrapper { align-items:stretch; justify-content:stretch; }
   body.zen textarea { width:100%; height:100%; }
-  #settingsPanel label { display:block; margin-bottom:0.5rem; }
-  #settingsPanel button { margin-top:0.5rem; }
 </style>
 </head>
 <body>
-<div class="wrapper">
-  <i id="settingsToggle" class="fa-solid fa-gear"></i>
-  <textarea id="pad" placeholder="Start typing..."></textarea>
-    <div id="settingsPanel">
-      <label>Title: <input id="titleInput" type="text"></label>
-      <button id="download">Download</button>
-      <button id="zenToggle">Zen Mode</button>
-    </div>
+<div class="wrapper flex flex-col items-center justify-center h-full relative p-4">
+  <div id="tabs" class="flex space-x-2 mb-2 overflow-x-auto"></div>
+  <i id="settingsToggle" class="fa-solid fa-gear text-2xl cursor-pointer absolute top-2 right-2"></i>
+  <textarea id="pad" class="w-full max-w-3xl h-60 p-4 font-mono text-sm" placeholder="Start typing..."></textarea>
+  <div id="settingsPanel" class="absolute top-12 right-2 bg-white p-4 shadow-lg rounded hidden space-y-2">
+    <label class="flex flex-col text-sm">Title:
+      <input id="titleInput" type="text" class="border p-1 rounded">
+    </label>
+    <button id="download" class="bg-blue-500 text-white px-2 py-1 rounded">Download</button>
+    <button id="downloadAll" class="bg-blue-500 text-white px-2 py-1 rounded">Download All</button>
+    <button id="zenToggle" class="bg-gray-500 text-white px-2 py-1 rounded">Zen Mode</button>
+  </div>
 </div>
 <script>
 const pad = document.getElementById('pad');
@@ -33,25 +33,77 @@ const titleInput = document.getElementById('titleInput');
 const settingsToggle = document.getElementById('settingsToggle');
 const settingsPanel = document.getElementById('settingsPanel');
 const zenToggle = document.getElementById('zenToggle');
+const tabs = document.getElementById('tabs');
+const downloadAllBtn = document.getElementById('downloadAll');
 let zen = false;
 let mouseTimer;
 
-function load(){
-  pad.value = localStorage.getItem('scratchpad_content') || '';
-  titleInput.value = localStorage.getItem('scratchpad_title') || 'note';
+let notes = [];
+let current = 0;
+
+function saveNotes(){
+  localStorage.setItem('scratchpad_notes', JSON.stringify(notes));
 }
-load();
+
+function loadNotes(){
+  notes = JSON.parse(localStorage.getItem('scratchpad_notes') || 'null') || [{title:'note',content:''}];
+}
+
+function renderTabs(){
+  tabs.innerHTML = '';
+  notes.forEach((n,i)=>{
+    const btn = document.createElement('button');
+    btn.textContent = n.title || `note${i+1}`;
+    btn.className = (i===current?
+      'px-2 py-1 rounded bg-blue-500 text-white':
+      'px-2 py-1 rounded bg-gray-200 hover:bg-gray-300');
+    btn.onclick = ()=>{ saveCurrent(); current=i; loadCurrent(); renderTabs(); };
+    tabs.appendChild(btn);
+  });
+  const add = document.createElement('button');
+  add.textContent = '+';
+  add.className = 'px-2 py-1 rounded bg-green-500 text-white';
+  add.onclick = addNote;
+  tabs.appendChild(add);
+}
+
+function loadCurrent(){
+  const note = notes[current];
+  pad.value = note.content;
+  titleInput.value = note.title;
+}
+
+function saveCurrent(){
+  notes[current].content = pad.value;
+  notes[current].title = titleInput.value;
+}
+
+function addNote(){
+  saveCurrent();
+  notes.push({title:`note${notes.length+1}`,content:''});
+  current = notes.length-1;
+  saveNotes();
+  loadCurrent();
+  renderTabs();
+}
+
+loadNotes();
+renderTabs();
+loadCurrent();
 
 pad.addEventListener('input', () => {
-  localStorage.setItem('scratchpad_content', pad.value);
+  notes[current].content = pad.value;
+  saveNotes();
 });
 
 titleInput.addEventListener('input', () => {
-  localStorage.setItem('scratchpad_title', titleInput.value);
+  notes[current].title = titleInput.value;
+  saveNotes();
+  renderTabs();
 });
 
 settingsToggle.addEventListener('click', () => {
-  settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
+  settingsPanel.classList.toggle('hidden');
 });
 
 zenToggle.addEventListener('click', () => {
@@ -65,7 +117,7 @@ zenToggle.addEventListener('click', () => {
 function enterZen() {
   zen = true;
   document.body.classList.add('zen');
-  settingsPanel.style.display = 'none';
+  settingsPanel.classList.add('hidden');
   settingsToggle.style.display = 'none';
   pad.focus();
 }
@@ -73,13 +125,13 @@ function enterZen() {
 function exitZen() {
   zen = false;
   document.body.classList.remove('zen');
-  settingsPanel.style.display = 'none';
+  settingsPanel.classList.add('hidden');
   settingsToggle.style.display = 'block';
 }
 
 function hideUi() {
   if (zen) {
-    settingsPanel.style.display = 'none';
+    settingsPanel.classList.add('hidden');
     settingsToggle.style.display = 'none';
   }
 }
@@ -99,11 +151,23 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-document.getElementById('download').addEventListener('click', () => {
-  const blob = new Blob([pad.value], {type: 'text/markdown'});
+downloadAllBtn.addEventListener('click', () => {
+  saveCurrent();
+  saveNotes();
+  const blob = new Blob([JSON.stringify(notes, null, 2)], {type: 'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  const title = titleInput.value || 'note';
+  a.download = 'notes.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('download').addEventListener('click', () => {
+  saveCurrent();
+  const blob = new Blob([notes[current].content], {type: 'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const title = notes[current].title || 'note';
   a.download = title + '.md';
   a.click();
   URL.revokeObjectURL(a.href);
