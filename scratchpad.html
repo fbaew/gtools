@@ -11,6 +11,8 @@
   textarea { width:80%; height:60%; font-family: monospace; font-size:1rem; padding:1rem; box-sizing:border-box; }
   #settingsToggle { position:absolute; top:10px; right:10px; font-size:1.5rem; cursor:pointer; }
   #settingsPanel { position:absolute; top:45px; right:10px; background:white; padding:1rem; box-shadow:0 2px 6px rgba(0,0,0,0.2); display:none; }
+  body.zen .wrapper { align-items:stretch; justify-content:stretch; }
+  body.zen textarea { width:100%; height:100%; }
   #settingsPanel label { display:block; margin-bottom:0.5rem; }
   #settingsPanel button { margin-top:0.5rem; }
 </style>
@@ -19,16 +21,20 @@
 <div class="wrapper">
   <i id="settingsToggle" class="fa-solid fa-gear"></i>
   <textarea id="pad" placeholder="Start typing..."></textarea>
-  <div id="settingsPanel">
-    <label>Title: <input id="titleInput" type="text"></label>
-    <button id="download">Download</button>
-  </div>
+    <div id="settingsPanel">
+      <label>Title: <input id="titleInput" type="text"></label>
+      <button id="download">Download</button>
+      <button id="zenToggle">Zen Mode</button>
+    </div>
 </div>
 <script>
 const pad = document.getElementById('pad');
 const titleInput = document.getElementById('titleInput');
 const settingsToggle = document.getElementById('settingsToggle');
 const settingsPanel = document.getElementById('settingsPanel');
+const zenToggle = document.getElementById('zenToggle');
+let zen = false;
+let mouseTimer;
 
 function load(){
   pad.value = localStorage.getItem('scratchpad_content') || '';
@@ -46,6 +52,51 @@ titleInput.addEventListener('input', () => {
 
 settingsToggle.addEventListener('click', () => {
   settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
+});
+
+zenToggle.addEventListener('click', () => {
+  if (zen) {
+    exitZen();
+  } else {
+    enterZen();
+  }
+});
+
+function enterZen() {
+  zen = true;
+  document.body.classList.add('zen');
+  settingsPanel.style.display = 'none';
+  settingsToggle.style.display = 'none';
+  pad.focus();
+}
+
+function exitZen() {
+  zen = false;
+  document.body.classList.remove('zen');
+  settingsPanel.style.display = 'none';
+  settingsToggle.style.display = 'block';
+}
+
+function hideUi() {
+  if (zen) {
+    settingsPanel.style.display = 'none';
+    settingsToggle.style.display = 'none';
+  }
+}
+
+function showUiTemporarily() {
+  if (!zen) return;
+  settingsToggle.style.display = 'block';
+  clearTimeout(mouseTimer);
+  mouseTimer = setTimeout(hideUi, 2000);
+}
+
+document.addEventListener('mousemove', showUiTemporarily);
+
+document.addEventListener('keydown', (e) => {
+  if (zen && e.key === 'Escape') {
+    exitZen();
+  }
 });
 
 document.getElementById('download').addEventListener('click', () => {
