@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Countdown Timer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  body { font-family: Arial, sans-serif; background:#f3f4f6; padding:1rem; text-align:center; }
+  #display { font-size:5rem; font-weight:bold; margin-top:2rem; }
+  .controls { margin-top:1rem; }
+  input, select, button { margin:0.25rem; padding:0.25rem 0.5rem; font-size:1rem; }
+</style>
+</head>
+<body>
+<h1>Countdown Timer</h1>
+<div>
+  <label>Duration:
+    <input id="duration" type="number" min="0" placeholder="0">
+  </label>
+  <select id="unit">
+    <option value="seconds">Seconds</option>
+    <option value="minutes">Minutes</option>
+    <option value="hours">Hours</option>
+  </select>
+</div>
+<div>OR</div>
+<div>
+  <label>Count to time (HH:MM:SS):
+    <input id="time" type="time" step="1">
+  </label>
+</div>
+<div class="controls">
+  <label><input type="checkbox" id="warnSound"> Warn near end</label>
+  <label><input type="checkbox" id="countSound"> 5s Countdown</label>
+  <label><input type="checkbox" id="endSound"> End sound</label>
+  <button id="start">Start</button>
+  <button id="stop" disabled>Stop</button>
+</div>
+<div id="display">00:00:00</div>
+<script>
+const durationInput = document.getElementById('duration');
+const unitSelect = document.getElementById('unit');
+const timeInput = document.getElementById('time');
+const display = document.getElementById('display');
+const startBtn = document.getElementById('start');
+const stopBtn = document.getElementById('stop');
+const warnSound = document.getElementById('warnSound');
+const countSound = document.getElementById('countSound');
+const endSound = document.getElementById('endSound');
+
+let timer, endTime;
+
+function beep(duration=200, freq=440){
+  if(!('AudioContext' in window)) return;
+  const ctx = new AudioContext();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration/1000);
+  setTimeout(()=>{osc.stop(); ctx.close();}, duration);
+}
+
+function format(ms){
+  if(ms<0) ms=0;
+  const total=Math.floor(ms/1000);
+  const h=Math.floor(total/3600).toString().padStart(2,'0');
+  const m=Math.floor((total%3600)/60).toString().padStart(2,'0');
+  const s=Math.floor(total%60).toString().padStart(2,'0');
+  return `${h}:${m}:${s}`;
+}
+
+function start(){
+  let secs=0;
+  if(durationInput.value){
+    const val=parseFloat(durationInput.value);
+    if(!isNaN(val)){
+      secs=val*(unitSelect.value==='hours'?3600:unitSelect.value==='minutes'?60:1);
+    }
+  } else if(timeInput.value){
+    const parts=timeInput.value.split(':');
+    const now=new Date();
+    let target=new Date(now.getFullYear(),now.getMonth(),now.getDate(),+parts[0],+parts[1],+(parts[2]||0));
+    if(target<now) target.setDate(target.getDate()+1);
+    secs=(target-now)/1000;
+  }
+  if(secs<=0) return;
+  endTime=Date.now()+secs*1000;
+  startBtn.disabled=true;
+  stopBtn.disabled=false;
+  tick();
+}
+
+function stop(){
+  clearTimeout(timer);
+  startBtn.disabled=false;
+  stopBtn.disabled=true;
+}
+
+function tick(){
+  const remaining=endTime-Date.now();
+  if(remaining<=0){
+    display.textContent='00:00:00';
+    if(endSound.checked) beep();
+    stop();
+    return;
+  }
+  const secs=Math.ceil(remaining/1000);
+  display.textContent=format(remaining);
+  if(warnSound.checked && secs===10) beep();
+  if(countSound.checked && secs<=5 && secs>0 && secs===Math.floor(remaining/1000)) beep();
+  timer=setTimeout(tick,200);
+}
+
+startBtn.addEventListener('click',start);
+stopBtn.addEventListener('click',stop);
+</script>
+</body>
+</html>
